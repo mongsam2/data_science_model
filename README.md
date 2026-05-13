@@ -69,15 +69,35 @@ data/             # 전체 gitignore 처리 — 파이프라인으로 재생성
   interim/      # 중간 산출물
   processed/    # 모델링용 최종 데이터셋 (parquet + 프리뷰 CSV)
 src/
-  data/
-    reference.py   # 주/FIPS/권역 매핑 테이블
-    download.py    # FAF5, FRED, Census, 항구 TEU 다운로더
-    preprocess.py  # 기획서 4단계 결합 파이프라인
+  data/           # 데이터 수집/전처리 모듈
+    reference.py    # 주/FIPS/권역 매핑 테이블
+    download.py     # FAF5, FRED, Census, 항구 TEU 다운로더
+    preprocess.py   # 기획서 4단계 결합 파이프라인
+  models/         # 모델 학습/평가/추론 코드
+    train.py        # 학습 루프, 모델 직렬화
+    evaluate.py     # 검증·테스트 지표 산출 (RMSE, MAPE 등)
+    predict.py      # 학습된 모델 로드 + 신규 입력 예측
+  configs/        # 실험 설정 (하이퍼파라미터, 피처 목록, 데이터 분할)
+    baseline.yaml   # 기준 모델 설정 — 같은 코드를 여러 설정으로 재사용
   utils/
 notebooks/        # 분석/EDA 노트북 보관
-configs/          # 설정 파일 보관
 main.py           # CLI 진입점 (download / preprocess / all)
 ```
+
+### `src/models/`와 `src/configs/` 설계 의도
+
+- **`src/models/`** — 모델 코드는 데이터 코드(`src/data/`)와 같은 레이어에서
+  재사용 가능한 모듈로 관리한다. `train.py`는 학습, `evaluate.py`는 지표 산출,
+  `predict.py`는 추론으로 책임을 분리하여 단위 테스트와 CLI 호출이 쉽도록 구성.
+  추후 `main.py`에 `train` / `evaluate` / `predict` 서브커맨드를 추가하면
+  데이터 파이프라인과 동일한 방식으로 호출 가능.
+- **`src/configs/`** — 하이퍼파라미터·피처 목록·학습/검증 분할 등 **실험마다
+  바뀌는 값**을 YAML로 외부화한다. 코드 수정 없이 설정 파일만 교체하여 다른
+  실험을 재현할 수 있고, 학습 시 사용한 설정 파일을 산출물과 함께 저장하면
+  실험 추적이 명확해진다. `baseline.yaml`은 기준 모델용 템플릿.
+- **학습된 모델 파일**(`.joblib`, `.pt` 등)은 코드가 아닌 산출물이므로 본
+  레포지토리에서는 `data/processed/`와 동일한 정책으로 `models/` 같은 별도
+  최상위 디렉토리(미생성)에 두고 `.gitignore` 처리하는 것을 권장한다.
 
 ## 데이터 처리 시 유의 사항
 
